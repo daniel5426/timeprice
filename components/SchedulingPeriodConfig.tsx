@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Calendar, Plus, X } from 'lucide-react';
 import { SchedulingPeriod } from '@/types';
-import { format, addDays, startOfWeek, endOfWeek } from 'date-fns';
+import { format, startOfWeek, endOfWeek } from 'date-fns';
 
 interface SchedulingPeriodConfigProps {
   schedulingPeriod?: SchedulingPeriod;
@@ -177,7 +177,7 @@ export default function SchedulingPeriodConfig({
                   weekendRules: {
                     ...schedulingPeriod?.weekendRules,
                     rotateWeekends: e.target.checked,
-                  } as any
+                  } as SchedulingPeriod['weekendRules']
                 })}
                 className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
               />
@@ -192,7 +192,7 @@ export default function SchedulingPeriodConfig({
                   weekendRules: {
                     ...schedulingPeriod?.weekendRules,
                     avoidBackToBack: e.target.checked,
-                  } as any
+                  } as SchedulingPeriod['weekendRules']
                 })}
                 className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
               />
@@ -212,7 +212,7 @@ export default function SchedulingPeriodConfig({
                   weekendRules: {
                     ...schedulingPeriod?.weekendRules,
                     maxWeekendsPerMonth: parseInt(e.target.value),
-                  } as any
+                  } as SchedulingPeriod['weekendRules']
                 })}
                 className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />

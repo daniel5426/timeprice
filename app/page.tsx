@@ -44,16 +44,18 @@ export default function Home() {
     { id: 'generate', label: 'Generate Schedule', icon: Download },
   ];
 
-  const updateConfig = (section: keyof SchedulingConfig, data: any) => {
+  const updateConfig = (section: keyof SchedulingConfig, data: SchedulingConfig[keyof SchedulingConfig]) => {
     setSchedulingConfig(prev => ({
       ...prev,
       [section]: data,
     }));
   };
 
-  const canGenerate = schedulingConfig.employees?.length > 0 && 
-                     schedulingConfig.shiftTypes?.length > 0 && 
-                     schedulingConfig.schedulingPeriod;
+  const canGenerate = Boolean(
+    (schedulingConfig.employees?.length ?? 0) > 0 && 
+    (schedulingConfig.shiftTypes?.length ?? 0) > 0 && 
+    schedulingConfig.schedulingPeriod
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -135,7 +137,10 @@ export default function Home() {
                 />
                 
                 {scheduleResult && (
-                  <ScheduleResults result={scheduleResult} />
+                  <ScheduleResults 
+                    result={scheduleResult} 
+                    employees={schedulingConfig.employees || []}
+                  />
                 )}
               </div>
             )}

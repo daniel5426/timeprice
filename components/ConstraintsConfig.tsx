@@ -9,7 +9,7 @@ interface ConstraintsConfigProps {
 }
 
 export default function ConstraintsConfig({ constraints, onConstraintsChange }: ConstraintsConfigProps) {
-  const updateConstraint = (key: keyof Constraints, value: any) => {
+  const updateConstraint = (key: keyof Constraints, value: Constraints[keyof Constraints]) => {
     onConstraintsChange({
       ...constraints,
       [key]: value,

@@ -2,15 +2,19 @@
 
 import { useState } from 'react';
 import { Download, Calendar, BarChart3, Users, AlertTriangle, CheckCircle } from 'lucide-react';
-import { ScheduleResult, GeneratedShift } from '@/types';
+import { ScheduleResult, GeneratedShift, Employee } from '@/types';
 import { format, parseISO } from 'date-fns';
 
 interface ScheduleResultsProps {
   result: ScheduleResult;
+  employees?: Employee[];
 }
 
-export default function ScheduleResults({ result }: ScheduleResultsProps) {
+export default function ScheduleResults({ result, employees = [] }: ScheduleResultsProps) {
   const [activeView, setActiveView] = useState<'calendar' | 'analytics' | 'violations'>('calendar');
+  
+  console.log('ScheduleResults received employees:', employees);
+  console.log('ScheduleResults received result:', result);
 
   const exportToCSV = () => {
     const csvContent = [
@@ -61,6 +65,12 @@ export default function ScheduleResults({ result }: ScheduleResultsProps) {
     if (score >= 90) return 'bg-green-100';
     if (score >= 70) return 'bg-yellow-100';
     return 'bg-red-100';
+  };
+
+  const getEmployeeName = (employeeId: string) => {
+    const employee = employees.find(emp => emp.id === employeeId);
+    console.log('Looking for employee:', employeeId, 'Found:', employee);
+    return employee ? employee.name : employeeId;
   };
 
   const groupedShifts = groupShiftsByDate(result.shifts);
@@ -157,7 +167,7 @@ export default function ScheduleResults({ result }: ScheduleResultsProps) {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveView(tab.id as any)}
+                  onClick={() => setActiveView(tab.id as 'calendar' | 'analytics' | 'violations')}
                   className={`${
                     activeView === tab.id
                       ? 'border-indigo-500 text-indigo-600'
@@ -198,7 +208,20 @@ export default function ScheduleResults({ result }: ScheduleResultsProps) {
                             </span>
                           </div>
                           <div className="text-xs text-gray-600">
-                            {shift.assignedEmployees.length} employee(s) assigned
+                            {shift.assignedEmployees.length > 0 ? (
+                              <div>
+                                <div className="font-medium mb-1">Assigned Employees:</div>
+                                <div className="space-y-1">
+                                  {shift.assignedEmployees.map(employeeId => (
+                                    <div key={employeeId} className="text-gray-700">
+                                      • {getEmployeeName(employeeId)}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-gray-500 italic">No employees assigned</div>
+                            )}
                           </div>
                         </div>
                       ))}

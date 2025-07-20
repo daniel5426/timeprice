@@ -9,7 +9,7 @@ interface PreferencesConfigProps {
 }
 
 export default function PreferencesConfig({ preferences, onPreferencesChange }: PreferencesConfigProps) {
-  const updatePreference = (key: keyof Preferences, value: any) => {
+  const updatePreference = (key: keyof Preferences, value: Preferences[keyof Preferences]) => {
     onPreferencesChange({
       ...preferences,
       [key]: value,

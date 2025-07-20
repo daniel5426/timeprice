@@ -18,6 +18,7 @@ export default function ShiftTypeManager({ shiftTypes, onShiftTypesChange }: Shi
     isRepeating: true,
     repeatPattern: 'daily',
   });
+  const [editingShiftType, setEditingShiftType] = useState<Partial<ShiftType>>({});
 
   const roles = ['Manager', 'Cashier', 'Cook', 'Server', 'Cleaner', 'Security'];
 
@@ -61,6 +62,51 @@ export default function ShiftTypeManager({ shiftTypes, onShiftTypesChange }: Shi
     setShowAddForm(false);
   };
 
+  const startEditing = (shiftType: ShiftType) => {
+    console.log('startEditing called with:', shiftType);
+    setEditingId(shiftType.id);
+    setEditingShiftType({
+      name: shiftType.name,
+      startTime: shiftType.startTime,
+      endTime: shiftType.endTime,
+      requiredRoles: [...shiftType.requiredRoles],
+      priority: shiftType.priority,
+      isRepeating: shiftType.isRepeating,
+      repeatPattern: shiftType.repeatPattern,
+    });
+    console.log('editingId set to:', shiftType.id);
+  };
+
+  const saveEdit = () => {
+    if (!editingId || !editingShiftType.name || !editingShiftType.startTime || !editingShiftType.endTime) return;
+    
+    const duration = calculateDuration(editingShiftType.startTime, editingShiftType.endTime);
+    
+    const updatedShiftType: ShiftType = {
+      id: editingId,
+      name: editingShiftType.name,
+      startTime: editingShiftType.startTime,
+      endTime: editingShiftType.endTime,
+      requiredRoles: editingShiftType.requiredRoles || [],
+      duration,
+      isRepeating: editingShiftType.isRepeating || false,
+      repeatPattern: editingShiftType.repeatPattern || 'daily',
+      priority: editingShiftType.priority || 5,
+    };
+    
+    onShiftTypesChange(shiftTypes.map(shift => 
+      shift.id === editingId ? updatedShiftType : shift
+    ));
+    
+    setEditingId(null);
+    setEditingShiftType({});
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingShiftType({});
+  };
+
   const updateShiftType = (id: string, updates: Partial<ShiftType>) => {
     onShiftTypesChange(shiftTypes.map(shift => 
       shift.id === id ? { ...shift, ...updates } : shift
@@ -94,6 +140,32 @@ export default function ShiftTypeManager({ shiftTypes, onShiftTypesChange }: Shi
     setNewShiftType({
       ...newShiftType,
       requiredRoles: (newShiftType.requiredRoles || []).filter(r => r.role !== role),
+    });
+  };
+
+  const addEditingRequiredRole = (role: string, count: number) => {
+    const existingRoles = editingShiftType.requiredRoles || [];
+    const existingRole = existingRoles.find(r => r.role === role);
+    
+    if (existingRole) {
+      setEditingShiftType({
+        ...editingShiftType,
+        requiredRoles: existingRoles.map(r => 
+          r.role === role ? { ...r, count } : r
+        ),
+      });
+    } else {
+      setEditingShiftType({
+        ...editingShiftType,
+        requiredRoles: [...existingRoles, { role, count }],
+      });
+    }
+  };
+
+  const removeEditingRequiredRole = (role: string) => {
+    setEditingShiftType({
+      ...editingShiftType,
+      requiredRoles: (editingShiftType.requiredRoles || []).filter(r => r.role !== role),
     });
   };
 
@@ -233,6 +305,130 @@ export default function ShiftTypeManager({ shiftTypes, onShiftTypesChange }: Shi
         </div>
       )}
 
+      {editingId && (
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          {console.log('Rendering edit form for editingId:', editingId)}
+          <h3 className="text-lg font-medium mb-4">Edit Shift Type</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Shift Name</label>
+              <input
+                type="text"
+                value={editingShiftType.name || ''}
+                onChange={(e) => setEditingShiftType({...editingShiftType, name: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="e.g., Morning, Evening, Night"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Priority (1-10)</label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={editingShiftType.priority || 5}
+                onChange={(e) => setEditingShiftType({...editingShiftType, priority: parseInt(e.target.value)})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+              <input
+                type="time"
+                value={editingShiftType.startTime || ''}
+                onChange={(e) => setEditingShiftType({...editingShiftType, startTime: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+              <input
+                type="time"
+                value={editingShiftType.endTime || ''}
+                onChange={(e) => setEditingShiftType({...editingShiftType, endTime: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Required Roles</label>
+            <div className="space-y-2">
+              {roles.map(role => {
+                const existingRole = (editingShiftType.requiredRoles || []).find(r => r.role === role);
+                return (
+                  <div key={role} className="flex items-center gap-2">
+                    <span className="w-20 text-sm text-gray-600">{role}:</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="10"
+                      value={existingRole?.count || 0}
+                      onChange={(e) => {
+                        const count = parseInt(e.target.value);
+                        if (count > 0) {
+                          addEditingRequiredRole(role, count);
+                        } else {
+                          removeEditingRequiredRole(role);
+                        }
+                      }}
+                      className="w-16 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={editingShiftType.isRepeating || false}
+                onChange={(e) => setEditingShiftType({...editingShiftType, isRepeating: e.target.checked})}
+                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Repeating Shift</span>
+            </label>
+            
+            {editingShiftType.isRepeating && (
+              <div className="mt-2">
+                <select
+                  value={editingShiftType.repeatPattern || 'daily'}
+                  onChange={(e) => setEditingShiftType({...editingShiftType, repeatPattern: e.target.value as 'daily' | 'weekly' | 'custom'})}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={saveEdit}
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700"
+            >
+              <Save size={16} className="inline mr-1" />
+              Save Changes
+            </button>
+            <button
+              onClick={cancelEdit}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              <X size={16} className="inline mr-1" />
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {shiftTypes.map((shiftType) => (
           <div key={shiftType.id} className="bg-white border border-gray-200 rounded-lg p-4">
@@ -240,7 +436,7 @@ export default function ShiftTypeManager({ shiftTypes, onShiftTypesChange }: Shi
               <h3 className="text-lg font-medium text-gray-900">{shiftType.name}</h3>
               <div className="flex gap-1">
                 <button
-                  onClick={() => setEditingId(shiftType.id)}
+                  onClick={() => startEditing(shiftType)}
                   className="text-indigo-600 hover:text-indigo-900"
                 >
                   <Edit size={16} />

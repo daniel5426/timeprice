@@ -1,0 +1,31 @@
+Name,Role,Skills,Max Hours/Week,Availability,Preferences
+Employee_1,Security,"Experienced, Fast",40,Weekends Only,Flexible
+Employee_2,Cleaner,"Bilingual, Team Player, Experienced",30,Night Shifts,Prefer Weekends
+Employee_3,Cleaner,"Team Player, Night Shift",20,Weekends Only,No Sundays
+Employee_4,Manager,"Night Shift, Team Player, Experienced",20,Mon–Sun 12:00–20:00,No Nights
+Employee_5,Cashier,"Experienced, New, Bilingual",40,Night Shifts,No Sundays
+Employee_6,Manager,"Bilingual, Experienced, Night Shift",40,Mon–Sun 12:00–20:00,No Sundays
+Employee_7,Cook,Team Player,20,Weekends Only,No Nights
+Employee_8,Cleaner,"Bilingual, Team Player, Fast",35,Mon–Sun 12:00–20:00,No Nights
+Employee_9,Cleaner,"Bilingual, Night Shift",40,Mon–Fri 09:00–17:00,Flexible
+Employee_10,Cook,"Bilingual, Experienced, New",30,Mon–Fri 09:00–17:00,No Sundays
+Employee_11,Manager,"Team Player, Night Shift",40,Weekends Only,Flexible
+Employee_12,Cook,"Experienced, Night Shift",40,Mon–Sun 12:00–20:00,Flexible
+Employee_13,Cook,"Night Shift, Team Player",30,Mon–Sun 12:00–20:00,No Nights
+Employee_14,Cleaner,Experienced,30,Night Shifts,No Nights
+Employee_15,Security,Night Shift,30,Mon–Sun 12:00–20:00,Prefer Weekends
+Employee_16,Cashier,Fast,35,Weekends Only,Flexible
+Employee_17,Manager,"Experienced, Fast, New",30,Mon–Sun 12:00–20:00,No Nights
+Employee_18,Manager,"Team Player, Experienced",20,Weekends Only,Flexible
+Employee_19,Manager,Fast,40,Night Shifts,No Sundays
+Employee_20,Security,"Bilingual, Night Shift",35,Weekends Only,Prefer Weekends
+Employee_21,Manager,"Bilingual, Experienced, Fast",30,Night Shifts,Morning Only
+Employee_22,Cook,Team Player,20,Mon–Fri 09:00–17:00,Prefer Weekends
+Employee_23,Manager,"Bilingual, Fast, Experienced",35,Mon–Sun 12:00–20:00,No Sundays
+Employee_24,Cleaner,Night Shift,30,Mon–Fri 09:00–17:00,Prefer Weekends
+Employee_25,Security,"Experienced, Fast",35,Night Shifts,No Nights
+Employee_26,Cashier,Bilingual,35,Mon–Fri 09:00–17:00,No Nights
+Employee_27,Manager,"Team Player, Bilingual, Fast",35,Mon–Fri 09:00–17:00,No Nights
+Employee_28,Cleaner,New,20,Night Shifts,No Sundays
+Employee_29,Cashier,"Fast, Night Shift",30,Mon–Sun 12:00–20:00,No Sundays
+Employee_30,Cook,Team Player,20,Mon–Fri 09:00–17:00,No Nights

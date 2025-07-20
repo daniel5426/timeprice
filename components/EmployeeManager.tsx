@@ -14,10 +14,13 @@ export default function EmployeeManager({ employees, onEmployeesChange }: Employ
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newEmployee, setNewEmployee] = useState<Partial<Employee>>({});
   const [showAddForm, setShowAddForm] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const editingEmployee = employees.find(emp => emp.id === editingId);
+
   const roles = ['Manager', 'Cashier', 'Cook', 'Server', 'Cleaner', 'Security'];
-  const skills = ['Customer Service', 'Cash Handling', 'Food Prep', 'Cleaning', 'Leadership', 'POS Systems'];
+
   const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,7 +49,6 @@ export default function EmployeeManager({ employees, onEmployeesChange }: Employ
   };
 
   const parseAvailability = (availabilityString: string): AvailabilitySlot[] => {
-    // Parse availability string like "Mon-Fri 9-17" or "Mon 9:00-17:00,Tue 10:00-18:00"
     if (!availabilityString.trim()) return [];
     
     try {
@@ -62,10 +64,50 @@ export default function EmployeeManager({ employees, onEmployeesChange }: Employ
 
       const slots: AvailabilitySlot[] = [];
       
-      // Handle "Mon-Fri 9-17" format
-      const rangeMatch = availabilityString.match(/(\w+)-(\w+)\s+(\d+)-(\d+)/i);
+      // Handle "Weekends Only"
+      if (availabilityString.toLowerCase().includes('weekends only')) {
+        slots.push(
+          { dayOfWeek: 0, startTime: '09:00', endTime: '17:00' }, // Sunday
+          { dayOfWeek: 6, startTime: '09:00', endTime: '17:00' }  // Saturday
+        );
+        return slots;
+      }
+      
+      // Handle "Night Shifts"
+      if (availabilityString.toLowerCase().includes('night shifts')) {
+        for (let day = 0; day < 7; day++) {
+          slots.push({
+            dayOfWeek: day,
+            startTime: '22:00',
+            endTime: '06:00'
+          });
+        }
+        return slots;
+      }
+      
+      // Handle "Mon–Sun 12:00–20:00" format (with en dash)
+      const rangeMatch = availabilityString.match(/(\w+)[–-](\w+)\s+(\d+):(\d+)–(\d+):(\d+)/i);
       if (rangeMatch) {
-        const [, startDay, endDay, startHour, endHour] = rangeMatch;
+        const [, startDay, endDay, startHour, startMin, endHour, endMin] = rangeMatch;
+        const startDayNum = dayMap[startDay.toLowerCase()];
+        const endDayNum = dayMap[endDay.toLowerCase()];
+        
+        if (startDayNum !== undefined && endDayNum !== undefined) {
+          for (let day = startDayNum; day <= endDayNum; day++) {
+            slots.push({
+              dayOfWeek: day,
+              startTime: `${startHour.padStart(2, '0')}:${startMin.padStart(2, '0')}`,
+              endTime: `${endHour.padStart(2, '0')}:${endMin.padStart(2, '0')}`,
+            });
+          }
+        }
+        return slots;
+      }
+      
+      // Handle "Mon-Fri 9-17" format (with regular dash)
+      const simpleRangeMatch = availabilityString.match(/(\w+)-(\w+)\s+(\d+)-(\d+)/i);
+      if (simpleRangeMatch) {
+        const [, startDay, endDay, startHour, endHour] = simpleRangeMatch;
         const startDayNum = dayMap[startDay.toLowerCase()];
         const endDayNum = dayMap[endDay.toLowerCase()];
         
@@ -78,6 +120,7 @@ export default function EmployeeManager({ employees, onEmployeesChange }: Employ
             });
           }
         }
+        return slots;
       }
       
       return slots;
@@ -130,11 +173,92 @@ export default function EmployeeManager({ employees, onEmployeesChange }: Employ
     window.URL.revokeObjectURL(url);
   };
 
+  const loadTestData = async () => {
+    try {
+      const response = await fetch('/employee_schedule_test_data.csv');
+      const csvText = await response.text();
+      
+      Papa.parse(csvText, {
+        header: true,
+        complete: (results: any) => {
+          const csvEmployees: Employee[] = results.data
+            .filter((row: any) => row.Name && row.Role)
+            .map((row: any, index: number) => ({
+              id: `emp-${Date.now()}-${index}`,
+              name: row.Name || '',
+              role: row.Role || '',
+              skills: row.Skills ? row.Skills.split(',').map((s: string) => s.trim()) : [],
+              maxHoursPerWeek: parseInt(row['Max Hours/Week']) || 40,
+              availability: parseAvailability(row.Availability || ''),
+              preferences: row.Preferences ? row.Preferences.split(',').map((p: string) => p.trim()) : [],
+              email: row.Email || '',
+            }));
+          onEmployeesChange([...employees, ...csvEmployees]);
+        },
+        error: (error: any) => {
+          console.error('Error parsing test data CSV:', error);
+        }
+      });
+    } catch (error) {
+      console.error('Error loading test data:', error);
+    }
+  };
+
+  const clearAllEmployees = () => {
+    if (window.confirm('Are you sure you want to remove all employees? This action cannot be undone.')) {
+      onEmployeesChange([]);
+    }
+  };
+
+  const saveEditedEmployee = () => {
+    if (!editingId || !editingEmployee) return;
+    
+    const updatedEmployee: Employee = {
+      ...editingEmployee,
+      name: newEmployee.name || editingEmployee.name,
+      role: newEmployee.role || editingEmployee.role,
+      skills: newEmployee.skills || editingEmployee.skills,
+      maxHoursPerWeek: newEmployee.maxHoursPerWeek || editingEmployee.maxHoursPerWeek,
+      availability: newEmployee.availability || editingEmployee.availability,
+      preferences: newEmployee.preferences || editingEmployee.preferences,
+      email: newEmployee.email || editingEmployee.email,
+    };
+    
+    updateEmployee(editingId, updatedEmployee);
+    setEditingId(null);
+    setNewEmployee({});
+  };
+
+  const startEditing = (employee: Employee) => {
+    setEditingId(employee.id);
+    setNewEmployee({
+      name: employee.name,
+      role: employee.role,
+      skills: employee.skills,
+      maxHoursPerWeek: employee.maxHoursPerWeek,
+      availability: employee.availability,
+      preferences: employee.preferences,
+      email: employee.email,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Employee Management</h2>
         <div className="flex gap-2">
+          <button
+            onClick={loadTestData}
+            className="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 border border-green-300 rounded-md hover:bg-green-100"
+          >
+            Load Test Data
+          </button>
+          <button
+            onClick={clearAllEmployees}
+            className="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-300 rounded-md hover:bg-red-100"
+          >
+            Clear All
+          </button>
           <button
             onClick={downloadTemplate}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
@@ -225,50 +349,69 @@ export default function EmployeeManager({ employees, onEmployeesChange }: Employ
           <div className="mt-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">Availability</label>
             <div className="space-y-2">
-              {daysOfWeek.map((day, index) => (
-                <div key={day} className="flex items-center gap-2">
-                  <span className="w-20 text-sm text-gray-600">{day}:</span>
-                  <input
-                    type="time"
-                    placeholder="Start"
-                    className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    onChange={(e) => {
-                      const availability = newEmployee.availability || [];
-                      const existingSlot = availability.find(slot => slot.dayOfWeek === index);
-                      if (existingSlot) {
-                        existingSlot.startTime = e.target.value;
-                      } else if (e.target.value) {
-                        availability.push({
-                          dayOfWeek: index,
-                          startTime: e.target.value,
-                          endTime: '17:00'
-                        });
-                      }
-                      setNewEmployee({...newEmployee, availability});
-                    }}
-                  />
-                  <span className="text-sm text-gray-500">to</span>
-                  <input
-                    type="time"
-                    placeholder="End"
-                    className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    onChange={(e) => {
-                      const availability = newEmployee.availability || [];
-                      const existingSlot = availability.find(slot => slot.dayOfWeek === index);
-                      if (existingSlot) {
-                        existingSlot.endTime = e.target.value;
-                      } else if (e.target.value) {
-                        availability.push({
-                          dayOfWeek: index,
-                          startTime: '09:00',
-                          endTime: e.target.value
-                        });
-                      }
-                      setNewEmployee({...newEmployee, availability});
-                    }}
-                  />
-                </div>
-              ))}
+              {daysOfWeek.map((day, index) => {
+                const existingSlot = (newEmployee.availability || []).find(slot => slot.dayOfWeek === index);
+                return (
+                  <div key={day} className="flex items-center gap-2">
+                    <span className="w-20 text-sm text-gray-600">{day}:</span>
+                    <input
+                      type="time"
+                      placeholder="Start"
+                      value={existingSlot?.startTime || ''}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      onChange={(e) => {
+                        const availability = newEmployee.availability || [];
+                        const existingSlot = availability.find(slot => slot.dayOfWeek === index);
+                        if (existingSlot) {
+                          existingSlot.startTime = e.target.value;
+                        } else if (e.target.value) {
+                          availability.push({
+                            dayOfWeek: index,
+                            startTime: e.target.value,
+                            endTime: '17:00'
+                          });
+                        }
+                        setNewEmployee({...newEmployee, availability});
+                      }}
+                    />
+                    <span className="text-sm text-gray-500">to</span>
+                    <input
+                      type="time"
+                      placeholder="End"
+                      value={existingSlot?.endTime || ''}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      onChange={(e) => {
+                        const availability = newEmployee.availability || [];
+                        const existingSlot = availability.find(slot => slot.dayOfWeek === index);
+                        if (existingSlot) {
+                          existingSlot.endTime = e.target.value;
+                        } else if (e.target.value) {
+                          availability.push({
+                            dayOfWeek: index,
+                            startTime: '09:00',
+                            endTime: e.target.value
+                          });
+                        }
+                        setNewEmployee({...newEmployee, availability});
+                      }}
+                    />
+                    {existingSlot && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const availability = newEmployee.availability || [];
+                          const filteredAvailability = availability.filter(slot => slot.dayOfWeek !== index);
+                          setNewEmployee({...newEmployee, availability: filteredAvailability});
+                        }}
+                        className="text-red-500 hover:text-red-700 ml-2"
+                        title="Remove this day"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             <p className="text-xs text-gray-500 mt-1">
               Set available hours for each day. Leave blank for days off.
@@ -285,6 +428,149 @@ export default function EmployeeManager({ employees, onEmployeesChange }: Employ
             </button>
             <button
               onClick={() => setShowAddForm(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              <X size={16} className="inline mr-1" />
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {editingId && editingEmployee && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <h3 className="text-lg font-medium mb-4">Edit Employee: {editingEmployee.name}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <input
+                type="text"
+                value={newEmployee.name || ''}
+                onChange={(e) => setNewEmployee({...newEmployee, name: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Employee name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+              <select
+                value={newEmployee.role || ''}
+                onChange={(e) => setNewEmployee({...newEmployee, role: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Select role</option>
+                {roles.map(role => (
+                  <option key={role} value={role}>{role}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Max Hours/Week</label>
+              <input
+                type="number"
+                value={newEmployee.maxHoursPerWeek || ''}
+                onChange={(e) => setNewEmployee({...newEmployee, maxHoursPerWeek: parseInt(e.target.value)})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="40"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                value={newEmployee.email || ''}
+                onChange={(e) => setNewEmployee({...newEmployee, email: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="employee@example.com"
+              />
+            </div>
+          </div>
+          
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Availability</label>
+            <div className="space-y-2">
+              {daysOfWeek.map((day, index) => {
+                const existingSlot = (newEmployee.availability || []).find(slot => slot.dayOfWeek === index);
+                return (
+                  <div key={day} className="flex items-center gap-2">
+                    <span className="w-20 text-sm text-gray-600">{day}:</span>
+                    <input
+                      type="time"
+                      placeholder="Start"
+                      value={existingSlot?.startTime || ''}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      onChange={(e) => {
+                        const availability = newEmployee.availability || [];
+                        const existingSlot = availability.find(slot => slot.dayOfWeek === index);
+                        if (existingSlot) {
+                          existingSlot.startTime = e.target.value;
+                        } else if (e.target.value) {
+                          availability.push({
+                            dayOfWeek: index,
+                            startTime: e.target.value,
+                            endTime: '17:00'
+                          });
+                        }
+                        setNewEmployee({...newEmployee, availability});
+                      }}
+                    />
+                    <span className="text-sm text-gray-500">to</span>
+                    <input
+                      type="time"
+                      placeholder="End"
+                      value={existingSlot?.endTime || ''}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      onChange={(e) => {
+                        const availability = newEmployee.availability || [];
+                        const existingSlot = availability.find(slot => slot.dayOfWeek === index);
+                        if (existingSlot) {
+                          existingSlot.endTime = e.target.value;
+                        } else if (e.target.value) {
+                          availability.push({
+                            dayOfWeek: index,
+                            startTime: '09:00',
+                            endTime: e.target.value
+                          });
+                        }
+                        setNewEmployee({...newEmployee, availability});
+                      }}
+                    />
+                    {existingSlot && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const availability = newEmployee.availability || [];
+                          const filteredAvailability = availability.filter(slot => slot.dayOfWeek !== index);
+                          setNewEmployee({...newEmployee, availability: filteredAvailability});
+                        }}
+                        className="text-red-500 hover:text-red-700 ml-2"
+                        title="Remove this day"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Set available hours for each day. Leave blank for days off.
+            </p>
+          </div>
+          
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={saveEditedEmployee}
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700"
+            >
+              <Save size={16} className="inline mr-1" />
+              Save Changes
+            </button>
+            <button
+              onClick={() => {
+                setEditingId(null);
+                setNewEmployee({});
+              }}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
             >
               <X size={16} className="inline mr-1" />
@@ -348,7 +634,7 @@ export default function EmployeeManager({ employees, onEmployeesChange }: Employ
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <button
-                    onClick={() => setEditingId(employee.id)}
+                    onClick={() => startEditing(employee)}
                     className="text-indigo-600 hover:text-indigo-900 mr-2"
                   >
                     <Edit size={16} />

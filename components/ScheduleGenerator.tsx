@@ -33,7 +33,7 @@ export default function ScheduleGenerator({ config, onScheduleGenerated, canGene
         } : undefined,
       };
 
-      const response = await fetch('http://localhost:8000/schedule', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/schedule`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,10 +53,10 @@ export default function ScheduleGenerator({ config, onScheduleGenerated, canGene
       console.log(result);
 
       // Fix: Convert all date strings to Date objects for UI compatibility
-      const parseDates = (data: any): ScheduleResult => {
+      const parseDates = (data: ScheduleResult): ScheduleResult => {
         return {
           ...data,
-          shifts: data.shifts.map((shift: any) => ({
+          shifts: data.shifts.map((shift) => ({
             ...shift,
             date: new Date(shift.date),
           })),
