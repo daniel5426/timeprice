@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, Trash2, Edit, Save, X, Clock } from 'lucide-react';
-import { ShiftType, RequiredRole } from '@/types';
+import { ShiftType } from '@/types';
 
 interface ShiftTypeManagerProps {
   shiftTypes: ShiftType[];
@@ -107,11 +107,6 @@ export default function ShiftTypeManager({ shiftTypes, onShiftTypesChange }: Shi
     setEditingShiftType({});
   };
 
-  const updateShiftType = (id: string, updates: Partial<ShiftType>) => {
-    onShiftTypesChange(shiftTypes.map(shift => 
-      shift.id === id ? { ...shift, ...updates } : shift
-    ));
-  };
 
   const deleteShiftType = (id: string) => {
     onShiftTypesChange(shiftTypes.filter(shift => shift.id !== id));
@@ -307,7 +302,6 @@ export default function ShiftTypeManager({ shiftTypes, onShiftTypesChange }: Shi
 
       {editingId && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
-          {console.log('Rendering edit form for editingId:', editingId)}
           <h3 className="text-lg font-medium mb-4">Edit Shift Type</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">

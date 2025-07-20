@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Play, Loader2, AlertCircle, Sparkles, FileText, Copy, X } from 'lucide-react';
-import { SchedulingConfig, ScheduleResult, GeneratedShift, ScheduleAnalytics, EmployeeUtilization } from '@/types';
+import { SchedulingConfig, ScheduleResult } from '@/types';
 
 interface ScheduleGeneratorProps {
   config: SchedulingConfig;

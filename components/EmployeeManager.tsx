@@ -16,11 +16,7 @@ interface CSVRow {
   Email?: string;
 }
 
-interface CSVParsingResult {
-  data: CSVRow[];
-  errors: Papa.ParseError[];
-  meta: Papa.ParseMeta;
-}
+
 
 interface EmployeeManagerProps {
   employees: Employee[];
@@ -44,10 +40,11 @@ export default function EmployeeManager({ employees, onEmployeesChange }: Employ
     const file = event.target.files?.[0];
     if (!file) return;
 
-    Papa.parse(file as any, {
+    // @ts-expect-error Papa.parse expects File type but TypeScript doesn't recognize it properly
+    Papa.parse(file, {
       header: true,
-      complete: (results: CSVParsingResult) => {
-        const csvEmployees: Employee[] = results.data.map((row: CSVRow, index: number) => ({
+      complete: (results) => {
+        const csvEmployees: Employee[] = (results.data as CSVRow[]).map((row: CSVRow, index: number) => ({
           id: `emp-${Date.now()}-${index}`,
           name: row.Name || '',
           role: row.Role || '',
@@ -59,7 +56,7 @@ export default function EmployeeManager({ employees, onEmployeesChange }: Employ
         }));
         onEmployeesChange([...employees, ...csvEmployees]);
       },
-      error: (error: any) => {
+      error: (error: Papa.ParseError) => {
         console.error('Error parsing CSV:', error);
       }
     });
@@ -195,10 +192,11 @@ export default function EmployeeManager({ employees, onEmployeesChange }: Employ
       const response = await fetch('/employee_schedule_test_data.csv');
       const csvText = await response.text();
       
-      Papa.parse(csvText as any, {
+      // @ts-expect-error Papa.parse expects string but TypeScript doesn't recognize the overload properly
+      Papa.parse(csvText, {
         header: true,
-        complete: (results: CSVParsingResult) => {
-          const csvEmployees: Employee[] = results.data
+        complete: (results) => {
+          const csvEmployees: Employee[] = (results.data as CSVRow[])
             .filter((row: CSVRow) => row.Name && row.Role)
             .map((row: CSVRow, index: number) => ({
               id: `emp-${Date.now()}-${index}`,
@@ -206,13 +204,13 @@ export default function EmployeeManager({ employees, onEmployeesChange }: Employ
               role: row.Role || '',
               skills: row.Skills ? row.Skills.split(',').map((s: string) => s.trim()) : [],
               maxHoursPerWeek: parseInt(row['Max Hours/Week'] ?? '40') || 40,
-              availability: parseAvailability(row.Availability || ''),
+              availability: parseAvailability(row.Availability ?? ''),
               preferences: row.Preferences ? row.Preferences.split(',').map((p: string) => p.trim()) : [],
               email: row.Email || '',
             }));
           onEmployeesChange([...employees, ...csvEmployees]);
         },
-        error: (error: any) => {
+        error: (error: Papa.ParseError) => {
           console.error('Error parsing test data CSV:', error);
         }
       });
