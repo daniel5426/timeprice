@@ -5,6 +5,22 @@ import { Upload, Plus, Trash2, Edit, Save, X } from 'lucide-react';
 import { Employee, AvailabilitySlot } from '@/types';
 import Papa from 'papaparse';
 
+interface CSVRow {
+  Name?: string;
+  Role?: string;
+  Skills?: string;
+  'Max Hours/Week'?: string;
+  Availability?: string;
+  Preferences?: string;
+  Email?: string;
+}
+
+interface CSVParsingResult {
+  data: CSVRow[];
+  errors: Papa.ParseError[];
+  meta: Papa.ParseMeta;
+}
+
 interface EmployeeManagerProps {
   employees: Employee[];
   onEmployeesChange: (employees: Employee[]) => void;
@@ -27,16 +43,16 @@ export default function EmployeeManager({ employees, onEmployeesChange }: Employ
     const file = event.target.files?.[0];
     if (!file) return;
 
-    Papa.parse(file, {
+    Papa.parse(file as any, {
       header: true,
-      complete: (results: any) => {
-        const csvEmployees: Employee[] = results.data.map((row: any, index: number) => ({
+      complete: (results: CSVParsingResult) => {
+        const csvEmployees: Employee[] = results.data.map((row: CSVRow, index: number) => ({
           id: `emp-${Date.now()}-${index}`,
           name: row.Name || '',
           role: row.Role || '',
           skills: row.Skills ? row.Skills.split(',').map((s: string) => s.trim()) : [],
-          maxHoursPerWeek: parseInt(row['Max Hours/Week']) || 40,
-          availability: parseAvailability(row.Availability || ''),
+          maxHoursPerWeek: parseInt(row['Max Hours/Week'] ?? '40') || 40,
+          availability: parseAvailability(row.Availability ?? ''),
           preferences: row.Preferences ? row.Preferences.split(',').map((p: string) => p.trim()) : [],
           email: row.Email || '',
         }));
@@ -178,17 +194,17 @@ export default function EmployeeManager({ employees, onEmployeesChange }: Employ
       const response = await fetch('/employee_schedule_test_data.csv');
       const csvText = await response.text();
       
-      Papa.parse(csvText, {
+      Papa.parse(csvText as any, {
         header: true,
-        complete: (results: any) => {
+        complete: (results: CSVParsingResult) => {
           const csvEmployees: Employee[] = results.data
-            .filter((row: any) => row.Name && row.Role)
-            .map((row: any, index: number) => ({
+            .filter((row: CSVRow) => row.Name && row.Role)
+            .map((row: CSVRow, index: number) => ({
               id: `emp-${Date.now()}-${index}`,
               name: row.Name || '',
               role: row.Role || '',
               skills: row.Skills ? row.Skills.split(',').map((s: string) => s.trim()) : [],
-              maxHoursPerWeek: parseInt(row['Max Hours/Week']) || 40,
+              maxHoursPerWeek: parseInt(row['Max Hours/Week'] ?? '40') || 40,
               availability: parseAvailability(row.Availability || ''),
               preferences: row.Preferences ? row.Preferences.split(',').map((p: string) => p.trim()) : [],
               email: row.Email || '',
